@@ -25,7 +25,11 @@ HOME_HTML = """
 """
 
 ABOUT_HTML = """<html><head><title>About Acme</title></head><body>
-<p>Founded in 2019, 45 people across London and Austin.</p></body></html>"""
+<p>Founded in 2019, 45 people across London and Austin.</p>
+<a href="/team">Meet the team</a></body></html>"""
+
+TEAM_HTML = """<html><head><title>Team</title></head><body>
+<p>Our CTO previously led data platforms at a large carrier.</p></body></html>"""
 
 CAREERS_HTML = """<html><head><title>Careers</title>
 <script src="https://js.stripe.com/v3"></script></head><body>
@@ -35,6 +39,7 @@ SITE = {
     "https://acme.test": HOME_HTML,
     "https://acme.test/about": ABOUT_HTML,
     "https://acme.test/careers": CAREERS_HTML,
+    "https://acme.test/team": TEAM_HTML,
 }
 
 

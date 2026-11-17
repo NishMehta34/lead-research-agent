@@ -41,6 +41,7 @@ class ResearchResult(BaseModel):
     tech_stack: list[str] = Field(default_factory=list)
     pages_visited: list[str] = Field(default_factory=list)
     brief: SalesBrief
+    agent_trace: list[str] = Field(default_factory=list)  # the loop agent's decisions
     generated_at: str = Field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat(timespec="seconds")
     )

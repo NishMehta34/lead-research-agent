@@ -11,6 +11,13 @@ def _bullets(items: list[str]) -> str:
     return "\n".join(f"- {item}" for item in items) if items else "- (none found)"
 
 
+def _trace(steps: list[str]) -> str:
+    if not steps:
+        return ""
+    body = "\n".join(f"- {s}" if not s.startswith("  ") else f"  - {s.strip()}" for s in steps)
+    return f"## How the agent researched this\n{body}\n\n"
+
+
 def to_markdown(result: ResearchResult) -> str:
     p, b = result.profile, result.brief
     return f"""# Lead brief: {p.name or result.url}
@@ -49,7 +56,7 @@ def to_markdown(result: ResearchResult) -> str:
 **Follow-up after they accept:**
 > {b.follow_up_message}
 
----
+{_trace(result.agent_trace)}---
 Pages read: {", ".join(result.pages_visited)}
 
 *AI-generated from public website content. Check facts before sending anything.*

@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from app import __version__
 from app.agent import research_company
+from app.graph_agent import research_company_loop
 from app.llm import OpenAICompatibleLLM
 from app.models import ResearchResult
 from app.report import to_markdown
@@ -26,6 +27,7 @@ get_llm = OpenAICompatibleLLM
 
 class ResearchRequest(BaseModel):
     url: str
+    loop: bool = False  # True = LangGraph loop agent
 
 
 @app.get("/health")
@@ -36,6 +38,8 @@ def health() -> dict:
 @app.post("/research", response_model=ResearchResult)
 def research(request: ResearchRequest) -> ResearchResult:
     try:
+        if request.loop:
+            return research_company_loop(request.url, get_llm())
         return research_company(request.url, get_llm())
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc))

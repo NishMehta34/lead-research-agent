@@ -90,6 +90,42 @@ def _clip(text: str, limit: int) -> str:
     return text[: limit - 1].rsplit(" ", 1)[0].rstrip(",.;:") + "…"
 
 
+def merge_tech(tech: list[str], html: str) -> list[str]:
+    """Add any newly detected technologies; return a sorted list."""
+    return sorted(set(tech) | set(detect_tech(html)))
+
+
+def extract_profile(
+    llm: ChatModel, url: str, pages: list[PageContent], settings: Settings
+) -> CompanyProfile:
+    """LLM turns page text into a structured CompanyProfile."""
+    data = chat_json(
+        llm,
+        PROFILE_SYSTEM,
+        PROFILE_USER.format(url=url, pages=_format_pages(pages, settings.max_chars_per_page)),
+    )
+    return CompanyProfile.model_validate(data)
+
+
+def write_brief(
+    llm: ChatModel, profile: CompanyProfile, tech: list[str], settings: Settings
+) -> SalesBrief:
+    """LLM writes the sales brief; the connection note is clipped in code."""
+    data = chat_json(
+        llm,
+        BRIEF_SYSTEM,
+        BRIEF_USER.format(
+            seller=settings.seller_description,
+            profile=profile.model_dump_json(indent=2),
+            tech=", ".join(tech) or "none detected",
+            max_note=settings.max_note_chars,
+        ),
+    )
+    brief = SalesBrief.model_validate(data)
+    brief.connection_note = _clip(brief.connection_note, settings.max_note_chars)
+    return brief
+
+
 def research_company(
     url: str,
     llm: ChatModel,
@@ -115,27 +151,9 @@ def research_company(
             log.warning("Skipping %s: %s", link.url, exc)
     tech.sort()
 
-    # 5. Structured profile
-    profile_data = chat_json(
-        llm,
-        PROFILE_SYSTEM,
-        PROFILE_USER.format(url=url, pages=_format_pages(pages, settings.max_chars_per_page)),
-    )
-    profile = CompanyProfile.model_validate(profile_data)
-
-    # 6. Sales brief
-    brief_data = chat_json(
-        llm,
-        BRIEF_SYSTEM,
-        BRIEF_USER.format(
-            seller=settings.seller_description,
-            profile=profile.model_dump_json(indent=2),
-            tech=", ".join(tech) or "none detected",
-            max_note=settings.max_note_chars,
-        ),
-    )
-    brief = SalesBrief.model_validate(brief_data)
-    brief.connection_note = _clip(brief.connection_note, settings.max_note_chars)
+    # 5-6. Profile and brief
+    profile = extract_profile(llm, url, pages, settings)
+    brief = write_brief(llm, profile, tech, settings)
 
     return ResearchResult(
         url=url,

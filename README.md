@@ -9,6 +9,11 @@ python -m app.cli https://example.com
 # ✓ Example Corp -> reports/example-com.md
 ```
 
+It has two modes:
+
+- **Simple agent:** chooses pages once from the homepage, then writes the brief. It's fast and predictable.
+- **Loop agent (`--loop`):** built with **LangGraph**. It keeps asking itself what it still doesn't know, reads another page, and repeats until it has enough. It can follow a trail the homepage doesn't show, such as homepage → About → Team.
+
 See [docs/sample-report.md](docs/sample-report.md) for what a brief looks like.
 
 ---
@@ -33,6 +38,25 @@ flowchart LR
 4. **Read those pages.** Careers pages are especially useful because job ads reveal the tech stack and growth.
 5. **Extract a structured profile** (`CompanyProfile`): name, offering, customers, size signals and hiring signals. The prompt tells the model to use only what the site says and to leave fields empty rather than guess.
 6. **Write the brief** (`SalesBrief`) from the profile, the tech stack and a description of what *you* sell, set in `SELLER_DESCRIPTION`.
+
+### Loop agent (LangGraph)
+
+```mermaid
+flowchart LR
+    S([start]) --> H[fetch_homepage]
+    H --> A{assess<br/>enough info?}
+    A -- "no: read these pages" --> M[fetch_more<br/>+ collect new links]
+    M --> A
+    A -- "yes / limit reached" --> P[extract_profile]
+    P --> W[write_brief]
+    W --> E([end])
+```
+
+- **`assess`:** the LLM checks four things (what the company does, its customers, its size or stage, and hiring or tech signals), lists what's missing and picks the next pages to read.
+- **`fetch_more`:** reads those pages and adds any new links it finds to the list of candidates, which is how the agent finds pages the homepage doesn't link to.
+- **`route_after_assess`:** guarantees the loop ends. It stops when the model says it has enough, or when it hits `MAX_LOOP_PAGES` or `MAX_LOOP_ROUNDS`, or when no links remain. An agent loop needs hard limits enforced in code; the model's judgement alone isn't enough.
+- **Agent trace:** every decision is recorded and printed in the report under "How the agent researched this", so you can see why it read each page.
+- **Testable without LangGraph:** the nodes and the router are plain functions, and only `build_graph()` imports LangGraph.
 
 ### Design decisions
 
@@ -90,6 +114,12 @@ python -m app.cli --batch companies.txt
 ```
 This writes a brief per company plus `reports/summary.csv`, which you can open in Excel or Google Sheets.
 
+**Loop agent:**
+```bash
+python -m app.cli https://example.com --loop -v
+```
+`-v` prints each decision the agent makes as it runs.
+
 **As an API:**
 ```bash
 uvicorn app.api:app --reload
@@ -98,6 +128,8 @@ Then open http://localhost:8000/docs, or call it directly:
 ```bash
 curl -X POST localhost:8000/research -H "Content-Type: application/json" \
      -d '{"url": "https://example.com"}'
+# loop agent:
+#    -d '{"url": "https://example.com", "loop": true}'
 ```
 
 **With Docker:**
@@ -115,7 +147,7 @@ To use Ollama running on your own machine from inside Docker, set `LLM_BASE_URL=
 pytest -v
 ```
 
-The tests run offline against a fake website and a fake LLM. They cover HTML parsing, tech detection, JSON repair and retry, the agent's page choice and keyword fallback, skipping broken pages, connection-note length, report output and the API endpoints. GitHub Actions runs them on every push.
+The tests run offline against a fake website and a fake LLM. They cover HTML parsing, tech detection, JSON repair and retry, the agent's page choice and keyword fallback, skipping broken pages, connection-note length, report output and the API endpoints. For the loop agent, they check that it follows links found on later pages, respects the page and round limits, falls back when the model's reply is unusable, and runs end to end as a real LangGraph graph. GitHub Actions runs them on every push.
 
 ---
 
@@ -123,7 +155,8 @@ The tests run offline against a fake website and a fake LLM. They cover HTML par
 
 ```
 app/
-  agent.py        the research pipeline and the agent's page-choice step
+  agent.py        simple agent: choose pages once, then write the brief
+  graph_agent.py  loop agent: LangGraph state machine (assess -> fetch_more -> ...)
   fetcher.py      HTTP, robots.txt, HTML to text and links
   tech_detect.py  rule-based tech-stack fingerprints
   llm.py          OpenAI-compatible client and JSON parsing/retry
@@ -146,7 +179,6 @@ tests/            offline tests with a fake website and fake LLM
 
 - News and press-release search, so briefs mention recent events.
 - Headless-browser rendering (Playwright) for JavaScript-heavy sites.
-- A LangGraph version where the agent loops until it has enough information, instead of reading a fixed number of pages.
 - Saving briefs to PostgreSQL, with a simple pipeline view.
 
 ## License

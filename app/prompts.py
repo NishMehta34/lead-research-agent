@@ -17,6 +17,35 @@ tech stack and growth). Skip login, legal, cookie and blog-post pages.
 Reply as JSON: {{"chosen": [<link numbers>], "reason": "<one sentence>"}}"""
 
 
+ASSESS_SYSTEM = (
+    "You are a B2B sales researcher deciding whether you know enough about a "
+    "company to write a useful sales brief, and if not, which page to read "
+    "next. Reply with JSON only."
+)
+
+ASSESS_USER = """Company: {url}
+
+To write a good brief you need to know:
+1. What the company does and its products or services
+2. Who its customers are
+3. Its size or stage (team size, offices, funding)
+4. Hiring or technology signals (careers pages are good for this)
+
+Pages read so far:
+{pages}
+
+Unread links on this site (number: anchor text -> url):
+{links}
+
+You may read at most {max_next} more pages this round and {remaining} in total.
+
+Reply as JSON:
+{{"enough": true or false,
+  "missing": ["which of the 4 points are still unknown"],
+  "next": [<link numbers to read next, empty if enough>],
+  "reason": "<one sentence>"}}"""
+
+
 PROFILE_SYSTEM = (
     "You extract facts about a company from its website text. Use only what "
     "the text says. If something is not stated, use an empty string or empty "

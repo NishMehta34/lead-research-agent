@@ -35,6 +35,11 @@ class Settings:
 
     # Research limits: keep the agent polite and fast.
     max_extra_pages: int = int(os.getenv("MAX_EXTRA_PAGES", "3"))
+
+    # Loop agent (LangGraph): hard limits so it always stops.
+    max_loop_pages: int = int(os.getenv("MAX_LOOP_PAGES", "6"))  # including homepage
+    max_loop_rounds: int = int(os.getenv("MAX_LOOP_ROUNDS", "4"))
+    pages_per_round: int = int(os.getenv("PAGES_PER_ROUND", "2"))
     max_chars_per_page: int = int(os.getenv("MAX_CHARS_PER_PAGE", "4000"))
     request_timeout: float = float(os.getenv("REQUEST_TIMEOUT", "15"))
     user_agent: str = os.getenv(
