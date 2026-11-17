@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.pytest_cache/
+.DS_Store
+
+# Generated briefs may contain prospect details: keep them out of GitHub
+reports/*
+!reports/.gitkeep
+companies.txt

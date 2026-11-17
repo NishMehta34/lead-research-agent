@@ -1,0 +1,4 @@
+# One company website per line. Lines starting with # are ignored.
+# Copy this file to companies.txt and add your own targets.
+https://example.com
+https://example.org
